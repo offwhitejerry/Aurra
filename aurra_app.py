@@ -1,7 +1,6 @@
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-import urllib.parse
 
 # ========== CONFIG ==========
 SPOTIFY_CLIENT_ID = "5b5562cb2f5c4bb2bb0c9d3ce594d1c7"
@@ -24,13 +23,13 @@ auth_manager = SpotifyOAuth(
 )
 
 # ========== HANDLE REDIRECT ==========
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 if "code" in query_params and "spotify_token" not in st.session_state:
-    code = query_params["code"][0]
+    code = query_params["code"]
     token_info = auth_manager.get_access_token(code, check_cache=False)
     st.session_state.spotify_token = token_info["access_token"]
-    st.experimental_set_query_params()  # clear URL params
-    st.experimental_rerun()
+    st.query_params.clear()  # clear ?code= from the URL
+    st.rerun()
 
 # ========== LOGIN FLOW ==========
 if "spotify_token" not in st.session_state:
@@ -40,7 +39,7 @@ if "spotify_token" not in st.session_state:
 
 # ========== MAIN FUNCTION ==========
 sp = spotipy.Spotify(auth=st.session_state.spotify_token)
-vibe = st.text_input("Your current mood:", placeholder="e.g. calm ocean, rage gym, breakup")
+vibe = st.text_input("Your current mood:", placeholder="e.g. mellow morning, underground club, heartbreak")
 
 if vibe:
     with st.spinner("Matching your vibe..."):
@@ -51,8 +50,3 @@ if vibe:
                 st.warning("No playlists found.")
             else:
                 st.success(f"Top playlists for: **{vibe}**")
-                for i, p in enumerate(playlists):
-                    st.markdown(f"{i+1}. [{p['name']}]({p['external_urls']['spotify']})")
-        except Exception as e:
-            st.error("Something went wrong.")
-            st.code(str(e))
