@@ -16,27 +16,19 @@ st.subheader("Match your mood to the perfect playlists.")
 
 vibe = st.text_input("Describe your current mood:", placeholder="e.g. chill sunset, gym hype, breakup")
 
-if st.button("🎵 Match My Mood") and vibe:
+if vibe:
     try:
-        # ========== SPOTIFY AUTH + SEARCH ==========
-        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        auth_manager = SpotifyOAuth(
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
             scope="playlist-read-private",
             show_dialog=True
-        ))
+        )
 
-        results = sp.search(q=vibe, type='playlist', limit=5)
-        playlists = results['playlists']['items']
+        auth_url = auth_manager.get_authorize_url()
+        st.markdown(f"[🎵 Tap here to match your mood]({auth_url})", unsafe_allow_html=True)
+        st.caption("This opens Spotify login — works better on mobile.")
 
-        if not playlists:
-            st.warning("No playlists found for that vibe.")
-        else:
-            st.success(f"Top playlists for: **{vibe}**")
-            for i, playlist in enumerate(playlists):
-                st.markdown(f"{i+1}. [{playlist['name']}]({playlist['external_urls']['spotify']})")
-
-    except Exception as e:
-        st.error("Something went wrong. Try refreshing or checking your Spotify login.")
-        st.text(f"Error: {e}")
+        # OPTIONAL: once authorized, continue from callback handling...
+        token_info = auth_manager.get_cached_token()
