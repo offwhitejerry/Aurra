@@ -28,7 +28,7 @@ if "code" in query_params and "spotify_token" not in st.session_state:
     code = query_params["code"]
     token_info = auth_manager.get_access_token(code, check_cache=False)
     st.session_state.spotify_token = token_info["access_token"]
-    st.query_params.clear()  # clear ?code= from the URL
+    st.query_params.clear()
     st.rerun()
 
 # ========== LOGIN FLOW ==========
@@ -50,3 +50,8 @@ if vibe:
                 st.warning("No playlists found.")
             else:
                 st.success(f"Top playlists for: **{vibe}**")
+                for i, p in enumerate(playlists):
+                    st.markdown(f"{i+1}. [{p['name']}]({p['external_urls']['spotify']})")
+        except Exception as e:
+            st.error("Something went wrong while searching playlists.")
+            st.code(str(e))
