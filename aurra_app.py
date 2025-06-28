@@ -8,47 +8,35 @@ SPOTIFY_CLIENT_ID = "5b5562cb2f5c4bb2bb0c9d3ce594d1c7"
 SPOTIFY_CLIENT_SECRET = "8d0d748dc2524ae29c2917fe7f341b3d"
 SPOTIFY_REDIRECT_URI = "https://aw4bcndwzmcvhkv3uymwnh.streamlit.app"
 
-# ========== SPOTIFY SETUP ==========
+# ========== STREAMLIT UI ==========
 
-def get_spotify_client():
-    return spotipy.Spotify(auth_manager=SpotifyOAuth(
-        client_id=SPOTIFY_CLIENT_ID,
-        client_secret=SPOTIFY_CLIENT_SECRET,
-        redirect_uri=SPOTIFY_REDIRECT_URI,
-        scope="playlist-read-private"
-    ))
-
-# ========== AURRA UI ==========
-
-st.set_page_config(page_title="Aurra", page_icon="🎧", layout="centered")
-st.markdown("<style>h1, h2, h3 { color: #62AEBB; }</style>", unsafe_allow_html=True)
-
+st.set_page_config(page_title="Aurra", layout="centered")
 st.title("🎧 Aurra")
-st.subheader("Find the perfect playlist for your mood.")
+st.subheader("Match your mood to the perfect playlists.")
 
-vibe_input = st.text_input("What are you feeling right now?", placeholder="e.g. confident sunrise, soft nostalgia")
+vibe = st.text_input("Describe your current mood:", placeholder="e.g. chill sunset, gym hype, breakup")
 
-if st.button("✨ Match My Mood"):
-    if vibe_input.strip() == "":
-        st.warning("Type your vibe before hitting the button.")
-    else:
-        st.write(f"🔍 Searching Spotify for: **{vibe_input}**")
-        try:
-            sp = get_spotify_client()
-            results = sp.search(q=vibe_input, type='playlist', limit=6)
-            playlists = results['playlists']['items']
+if st.button("🎵 Match My Mood") and vibe:
+    try:
+        # ========== SPOTIFY AUTH + SEARCH ==========
+        sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+            client_id=SPOTIFY_CLIENT_ID,
+            client_secret=SPOTIFY_CLIENT_SECRET,
+            redirect_uri=SPOTIFY_REDIRECT_URI,
+            scope="playlist-read-private",
+            show_dialog=True
+        ))
 
-            if not playlists:
-                st.error("No matching playlists found.")
-            else:
-                for playlist in playlists:
-                    name = playlist.get("name", "[Untitled Playlist]")
-                    url = playlist["external_urls"]["spotify"]
-                    image = playlist['images'][0]['url'] if playlist['images'] else None
+        results = sp.search(q=vibe, type='playlist', limit=5)
+        playlists = results['playlists']['items']
 
-                    if image:
-                        st.image(image, width=300)
-                    st.markdown(f"[**{name}**]({url})", unsafe_allow_html=True)
-                    st.markdown("---")
-        except Exception as e:
-            st.error(f"Something went wrong: {e}")
+        if not playlists:
+            st.warning("No playlists found for that vibe.")
+        else:
+            st.success(f"Top playlists for: **{vibe}**")
+            for i, playlist in enumerate(playlists):
+                st.markdown(f"{i+1}. [{playlist['name']}]({playlist['external_urls']['spotify']})")
+
+    except Exception as e:
+        st.error("Something went wrong. Try refreshing or checking your Spotify login.")
+        st.text(f"Error: {e}")
