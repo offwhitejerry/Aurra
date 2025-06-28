@@ -13,7 +13,7 @@ st.set_page_config(page_title="Aurra", layout="centered")
 st.title("🎧 Aurra")
 st.caption("Describe your vibe. Get the perfect Spotify playlists.")
 
-# ========== INIT AUTH MANAGER ==========
+# ========== INIT AUTH ==========
 auth_manager = SpotifyOAuth(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
@@ -39,19 +39,21 @@ if "spotify_token" not in st.session_state:
 
 # ========== MAIN FUNCTION ==========
 sp = spotipy.Spotify(auth=st.session_state.spotify_token)
-vibe = st.text_input("Your current mood:", placeholder="e.g. mellow morning, underground club, heartbreak")
+vibe = st.text_input("Your current mood:", placeholder="e.g. chill sunrise, hype gym, heartbreak")
 
 if vibe:
     with st.spinner("Matching your vibe..."):
         try:
             results = sp.search(q=vibe, type="playlist", limit=5)
-            playlists = results["playlists"]["items"]
+            playlists = results.get("playlists", {}).get("items", [])
             if not playlists:
                 st.warning("No playlists found.")
             else:
                 st.success(f"Top playlists for: **{vibe}**")
                 for i, p in enumerate(playlists):
-                    st.markdown(f"{i+1}. [{p['name']}]({p['external_urls']['spotify']})")
+                    name = p.get("name", "Unnamed Playlist")
+                    url = p.get("external_urls", {}).get("spotify", "#")
+                    st.markdown(f"{i+1}. [{name}]({url})")
         except Exception as e:
             st.error("Something went wrong while searching playlists.")
             st.code(str(e))
