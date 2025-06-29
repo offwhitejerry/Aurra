@@ -52,22 +52,14 @@ if vibe:
         try:
             results = sp.search(q=vibe, type="playlist", limit=5)
 
-            # DEBUGGING
-            st.subheader("🔍 Raw API Response")
-            st.code(json.dumps(results, indent=2))
+            raw_items = results.get("playlists", {}).get("items", [])
+            playlists = [p for p in raw_items if p is not None]
 
-            # Safe access
-            playlists = results.get("playlists") if results else None
-            if playlists is None:
-                st.warning("No 'playlists' key found in response.")
-                st.stop()
-
-            items = playlists.get("items") if playlists else None
-            if not items:
-                st.warning("No playlists found.")
+            if not playlists:
+                st.warning("No playlists found. Try a different mood.")
             else:
                 st.success(f"Top playlists for: **{vibe}**")
-                for i, playlist in enumerate(items):
+                for i, playlist in enumerate(playlists):
                     name = playlist.get("name", "Untitled")
                     url = playlist.get("external_urls", {}).get("spotify", "#")
                     st.markdown(f"{i+1}. [{name}]({url})")
