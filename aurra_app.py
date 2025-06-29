@@ -1,6 +1,7 @@
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+import json
 
 # ========== CONFIG ==========
 SPOTIFY_CLIENT_ID = "5b5562cb2f5c4bb2bb0c9d3ce594d1c7"
@@ -13,7 +14,7 @@ st.set_page_config(page_title="Aurra", layout="centered")
 st.title("🎧 Aurra")
 st.caption("Describe your vibe. Get the perfect Spotify playlists.")
 
-# ========== AUTH SETUP ==========
+# ========== AUTH ==========
 auth_manager = SpotifyOAuth(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
@@ -28,14 +29,9 @@ if "code" in query_params and "spotify_token" not in st.session_state:
     try:
         code = query_params["code"]
         token_info = auth_manager.get_access_token(code, check_cache=False)
-        access_token = token_info.get("access_token") if token_info else None
-        if access_token:
-            st.session_state.spotify_token = access_token
-            st.query_params.clear()
-            st.rerun()
-        else:
-            st.error("Failed to retrieve Spotify token.")
-            st.stop()
+        st.session_state.spotify_token = token_info.get("access_token")
+        st.query_params.clear()
+        st.rerun()
     except Exception as e:
         st.error("Spotify login failed.")
         st.code(str(e))
@@ -47,27 +43,31 @@ if "spotify_token" not in st.session_state:
     st.markdown(f"[🔐 Log in to Spotify]({login_url})", unsafe_allow_html=True)
     st.stop()
 
-# ========== MAIN FUNCTION ==========
+# ========== MAIN ==========
 sp = spotipy.Spotify(auth=st.session_state.spotify_token)
-vibe = st.text_input("Your current mood:", placeholder="e.g. mellow morning, rage gym, heartbreak")
+vibe = st.text_input("Your current mood:", placeholder="e.g. chill sunset, gym hype")
 
 if vibe:
-    with st.spinner("Finding playlists..."):
+    with st.spinner("Searching playlists..."):
         try:
             results = sp.search(q=vibe, type="playlist", limit=5)
 
-            playlists = []
-            if results and isinstance(results, dict):
-                if "playlists" in results and isinstance(results["playlists"], dict):
-                    items = results["playlists"].get("items")
-                    if items and isinstance(items, list):
-                        playlists = items
+            # DEBUGGING
+            st.subheader("🔍 Raw API Response")
+            st.code(json.dumps(results, indent=2))
 
-            if not playlists:
-                st.warning("No playlists found. Try a different mood.")
+            # Safe access
+            playlists = results.get("playlists") if results else None
+            if playlists is None:
+                st.warning("No 'playlists' key found in response.")
+                st.stop()
+
+            items = playlists.get("items") if playlists else None
+            if not items:
+                st.warning("No playlists found.")
             else:
                 st.success(f"Top playlists for: **{vibe}**")
-                for i, playlist in enumerate(playlists):
+                for i, playlist in enumerate(items):
                     name = playlist.get("name", "Untitled")
                     url = playlist.get("external_urls", {}).get("spotify", "#")
                     st.markdown(f"{i+1}. [{name}]({url})")
