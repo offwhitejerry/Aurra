@@ -22,47 +22,52 @@ auth_manager = SpotifyOAuth(
     show_dialog=False
 )
 
-# ========== HANDLE SPOTIFY REDIRECT ==========
+# ========== HANDLE REDIRECT ==========
 query_params = st.query_params
 if "code" in query_params and "spotify_token" not in st.session_state:
     try:
         code = query_params["code"]
         token_info = auth_manager.get_access_token(code, check_cache=False)
-        st.session_state.spotify_token = token_info["access_token"]
-        st.query_params.clear()
-        st.rerun()
+        if token_info and "access_token" in token_info:
+            st.session_state.spotify_token = token_info["access_token"]
+            st.query_params.clear()
+            st.rerun()
+        else:
+            st.error("Failed to retrieve Spotify token.")
+            st.stop()
     except Exception as e:
         st.error("Spotify login failed.")
         st.code(str(e))
         st.stop()
 
-# ========== LOGIN FLOW ==========
+# ========== LOGIN ==========
 if "spotify_token" not in st.session_state:
     login_url = auth_manager.get_authorize_url()
     st.markdown(f"[🔐 Log in to Spotify]({login_url})", unsafe_allow_html=True)
     st.stop()
 
-# ========== MAIN FUNCTION ==========
+# ========== MAIN ==========
 sp = spotipy.Spotify(auth=st.session_state.spotify_token)
-vibe = st.text_input("Your current mood:", placeholder="e.g. mellow morning, rage gym, breakup energy")
+vibe = st.text_input("Your current mood:", placeholder="e.g. mellow morning, rage gym, breakup")
 
 if vibe:
-    with st.spinner("Finding your vibe..."):
+    with st.spinner("Searching playlists..."):
         try:
             results = sp.search(q=vibe, type="playlist", limit=5)
-            playlists = (
-                results.get("playlists", {}).get("items", []) if results else []
-            )
+
+            playlists = []
+            if results and isinstance(results, dict):
+                playlists = results.get("playlists", {}).get("items", [])
 
             if not playlists:
-                st.warning("No playlists found. Try describing the mood differently.")
+                st.warning("No playlists found. Try describing your mood another way.")
             else:
-                st.success(f"🎵 Top playlists for: **{vibe}**")
+                st.success(f"Top playlists for: **{vibe}**")
                 for i, p in enumerate(playlists):
-                    name = p.get("name", "Unnamed Playlist")
+                    name = p.get("name", "Untitled")
                     url = p.get("external_urls", {}).get("spotify", "#")
                     st.markdown(f"{i+1}. [{name}]({url})")
 
         except Exception as e:
-            st.error("Something went wrong while searching Spotify.")
+            st.error("An error occurred while fetching playlists.")
             st.code(str(e))
