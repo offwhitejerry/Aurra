@@ -39,7 +39,7 @@ if "token_info" not in st.session_state:
             st.stop()
     except Exception as e:
         st.error("Spotify login failed.")
-        st.code(str(e))
+        st.exception(e)
         st.stop()
 
 # ========== MAIN ==========
@@ -64,5 +64,5 @@ if vibe:
                     st.markdown(f"{i+1}. [{name}]({url})")
 
         except Exception as e:
-            st.error("Search failed.")
-            st.code(str(e))
+            st.error("Search failed. Here's the full error:")
+            st.exception(e)
